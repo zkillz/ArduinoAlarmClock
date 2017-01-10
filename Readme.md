@@ -1,4 +1,4 @@
-Nano Alarm Clock
+# Nano Alarm Clock
 
 Alarm Clock using following components:
 

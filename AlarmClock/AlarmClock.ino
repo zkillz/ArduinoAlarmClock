@@ -1,48 +1,81 @@
+#include <Button.h>
 #include <Wire.h>
 #include <SparkFunDS1307RTC.h>
 
-//#define SQW_INPUT_PIN 2   // Input pin to read SQW
-//#define SQW_OUTPUT_PIN 11 // LED to indicate SQW's state
+//objects
+Button alarmButton(A5);
+
+//pins
+int speakerPin = A0;
+
+//variables
+bool alarm = false;
+int toneTime;
+String alarmTime;
+String timeString;
+
+//lcd variables
+int digit1 = 5; //PWM Display pin 1
+int digit2 = 6; //PWM Display pin 2
+int digit3 = 9; //PWM Display pin 6
+int digit4 = 10; //PWM Display pin 8
+
+int segA = 2; //Display pin 14
+int segB = 3; //Display pin 16
+int segC = 4; //Display pin 13
+int segD = 7; //Display pin 3
+int segE = 8; //Display pin 5
+int segF = 11; //Display pin 11
+int segG = 12; //Display pin 15
 
 void setup() {
   Serial.begin(9600);
+  alarmSetup();
+  displaySetup();
+  alarmButton.begin();
+
   rtc.begin();
-  rtc.autoTime();
+  //rtc.autoTime();
+  //rtc.setTime(30,16,13,1,8,1,17);
 }
 
 void loop() {
   static int8_t lastSecond = -1;
 
   rtc.update();
+  displayNumber(clockTime(0).toInt());
+  alarmSleep();
 
   if (rtc.second() != lastSecond)
   {
-    serialTime();
+    if (alarmTime == clockTime(1)) {
+      alarm = true;
+    }
+    
+    if (alarm) {
+      alarmSound2();
+    }
+
+    //serialTime();
     lastSecond = rtc.second();
   }
 }
 
-void serialTime()
-{
-  Serial.print(String(rtc.hour()) + ":"); 
+String clockTime(bool seconds) {
+  timeString = "";
+
+  if (rtc.hour() < 10)
+    timeString = timeString + "0";
+  timeString = timeString + String(rtc.hour());
   if (rtc.minute() < 10)
-    Serial.print('0'); 
-  Serial.print(String(rtc.minute()) + ":"); 
-  if (rtc.second() < 10)
-    Serial.print('0'); 
-  Serial.print(String(rtc.second())); 
+    timeString = timeString + "0";
+  timeString = timeString + String(rtc.minute());
+  if (seconds) {
+    if (rtc.second() < 10)
+      timeString = timeString + "0";
+    timeString = timeString + String(rtc.second());
+  }
 
-  Serial.print(" | ");
-
-  Serial.print(rtc.dayStr()); // Print day string
-  //Serial.print(rtc.dayC()); // Print day character
-  //Serial.print(rtc.day()); // Print day integer (1-7, Sun-Sat)
-  
-  Serial.print(" - ");
-  
-  Serial.println(String(rtc.month()) + "/" +   // Print month
-               String(rtc.date()) + "/" +  // Print date
-               String(rtc.year()));        // Print year
-  
+  return timeString;
 }
 
