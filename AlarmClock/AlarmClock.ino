@@ -2,6 +2,14 @@
 #include <Wire.h>
 #include <SparkFunDS1307RTC.h>
 
+#define DISPLAY_BRIGHTNESS  100
+
+#define DIGIT_ON            LOW
+#define DIGIT_OFF           HIGH
+
+#define SEGMENT_ON          HIGH
+#define SEGMENT_OFF         LOW
+
 //objects
 Button alarmButton(A5);
 
@@ -11,28 +19,33 @@ int speakerPin = A0;
 //variables
 bool alarm = false;
 int toneTime;
-String alarmTime;
-String timeString;
+int buttonTime;
+int alarmMode = 0;
+int alarmHour = 7;
+int alarmMinute = 0;
+int alarmSecond = 0;
 
 //lcd variables
-int digit1 = 5; //PWM Display pin 1
-int digit2 = 6; //PWM Display pin 2
-int digit3 = 9; //PWM Display pin 6
-int digit4 = 10; //PWM Display pin 8
-
-int segA = 2; //Display pin 14
-int segB = 3; //Display pin 16
-int segC = 4; //Display pin 13
-int segD = 7; //Display pin 3
-int segE = 8; //Display pin 5
-int segF = 11; //Display pin 11
-int segG = 12; //Display pin 15
+//pwm digits
+int digit1 = 5;
+int digit2 = 6;
+int digit3 = 9;
+int digit4 = 10;
+//segments
+int segA = 2;
+int segB = 3;
+int segC = 4;
+int segD = 7;
+int segE = 8;
+int segF = 11;
+int segG = 12;
+int segPoint = 13;
 
 void setup() {
   Serial.begin(9600);
-  alarmSetup();
   displaySetup();
   alarmButton.begin();
+  pinMode(LED_BUILTIN, OUTPUT);
 
   rtc.begin();
   //rtc.autoTime();
@@ -43,26 +56,34 @@ void loop() {
   static int8_t lastSecond = -1;
 
   rtc.update();
+  digitalWrite(LED_BUILTIN, LOW);
   displayNumber(clockTime(0).toInt());
-  alarmSleep();
+  alarmFunction();
 
   if (rtc.second() != lastSecond)
   {
-    if (alarmTime == clockTime(1)) {
+    if (alarmTime() == clockTime(1)) {
       alarm = true;
     }
-    
+
     if (alarm) {
-      alarmSound2();
+      alarmSound();
     }
 
     //serialTime();
     lastSecond = rtc.second();
   }
+
+  while (alarmMode > 0) {
+    alarmConfig();
+    displayNumber(alarmTime().toInt());
+    //digitalWrite(LED_BUILTIN, HIGH);
+    displayPoint(alarmMode + 1);
+  }
 }
 
 String clockTime(bool seconds) {
-  timeString = "";
+  String timeString = "";
 
   if (rtc.hour() < 10)
     timeString = timeString + "0";
@@ -75,6 +96,22 @@ String clockTime(bool seconds) {
       timeString = timeString + "0";
     timeString = timeString + String(rtc.second());
   }
+
+  return timeString;
+}
+
+String alarmTime() {
+  String timeString = "";
+
+  if (alarmHour < 10)
+    timeString = timeString + "0";
+  timeString = timeString + alarmHour;
+  if (alarmMinute < 10)
+    timeString = timeString + "0";
+  timeString = timeString + alarmMinute;
+  if (alarmSecond < 10)
+    timeString = timeString + "0";
+  timeString = timeString + alarmSecond;
 
   return timeString;
 }
