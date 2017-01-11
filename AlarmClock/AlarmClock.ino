@@ -12,17 +12,20 @@
 
 //objects
 Button alarmButton(A5);
+Button modeButton(A4);
+Button valueButton(A3);
 
 //pins
 int speakerPin = A0;
 
 //variables
 bool alarm = false;
-int toneTime;
-int buttonTime;
+unsigned long toneTime;
+unsigned long buttonTime;
+unsigned long snoozeTime;
 int alarmMode = 0;
-int alarmHour = 7;
-int alarmMinute = 0;
+int alarmHour = 6;
+int alarmMinute = 30;
 int alarmSecond = 0;
 
 //lcd variables
@@ -45,40 +48,51 @@ void setup() {
   Serial.begin(9600);
   displaySetup();
   alarmButton.begin();
-  pinMode(LED_BUILTIN, OUTPUT);
+  modeButton.begin();
+  valueButton.begin();
 
   rtc.begin();
   //rtc.autoTime();
-  //rtc.setTime(30,16,13,1,8,1,17);
+  //rtc.setTime(00,35,18,3,10,1,17);
 }
 
 void loop() {
   static int8_t lastSecond = -1;
 
   rtc.update();
-  digitalWrite(LED_BUILTIN, LOW);
   displayNumber(clockTime(0).toInt());
-  alarmFunction();
+  alarmSleep();
+  switchMode();
 
   if (rtc.second() != lastSecond)
   {
-    if (alarmTime() == clockTime(1)) {
+    if (snoozeTime + alarmTime(1).toInt() == clockTime(1).toInt()) {
       alarm = true;
     }
 
     if (alarm) {
       alarmSound();
     }
-
+    
     //serialTime();
+    //serialDebug();
     lastSecond = rtc.second();
   }
 
   while (alarmMode > 0) {
-    alarmConfig();
-    displayNumber(alarmTime().toInt());
-    //digitalWrite(LED_BUILTIN, HIGH);
-    displayPoint(alarmMode + 1);
+    if (alarmMode > 2)
+      alarmMode = 0;
+    switchMode();
+    alarmSet();
+    displayNumber(alarmTime(0).toInt());
+    switch (alarmMode) {
+      case 1:
+        displayPoint(1);
+        break;
+      case 2:
+        displayPoint(3);
+        break;
+    }
   }
 }
 
@@ -100,7 +114,7 @@ String clockTime(bool seconds) {
   return timeString;
 }
 
-String alarmTime() {
+String alarmTime(bool seconds) {
   String timeString = "";
 
   if (alarmHour < 10)
@@ -109,9 +123,11 @@ String alarmTime() {
   if (alarmMinute < 10)
     timeString = timeString + "0";
   timeString = timeString + alarmMinute;
-  if (alarmSecond < 10)
-    timeString = timeString + "0";
-  timeString = timeString + alarmSecond;
+  if (seconds) {
+    if (alarmSecond < 10)
+      timeString = timeString + "0";
+    timeString = timeString + alarmSecond;
+  }
 
   return timeString;
 }
